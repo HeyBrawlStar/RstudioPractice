@@ -1,0 +1,102 @@
+---
+title: "fin3380_quiz8"
+author: '118010090'
+date: "11/18/2020"
+output: html_document
+---
+
+```{r}
+setwd("/Users/guangyaohe/Desktop/FIN3380/RstudioPractice/Fin3380/Fin3380_Quiz8")
+
+library(RPostgres)
+library(tidyr)
+library(dplyr)
+```
+<font size=6 >load industry and ff</font>
+```{r}
+IP.raw = read.fwf("10_Industry_Portfolios.txt",widths=c(6,7,7,7,7,7,7,7,7,7,7),skip=12)
+head(IP.raw)
+
+IP.raw = IP.raw[-which(is.na(IP.raw$V1))[1]:-nrow(IP.raw),]
+tail(IP.raw)
+
+colnames(IP.raw) = c("text.date",'NoDur','Durbl' , 'Manuf','Enrgy',
+                     'HiTec','Telcm','Shops','Hlth','Utils', 'Other')
+head(IP.raw)
+str(IP.raw)
+IP.raw = IP.raw[,c(-1)]
+
+tail(IP.raw)
+
+IP.raw = data.frame(apply(IP.raw,2,function(x) as.numeric(x)/100))
+
+IP.raw$date = seq(as.Date("1926-07-01"),as.Date("2020-09-30"),by="months")
+IP.raw = subset(IP.raw,IP.raw$date>="1990-01-01" & IP.raw$date<="2017-12-01")
+
+head(IP.raw)
+tail(IP.raw)
+load("ff.raw.RData")
+
+industry = inner_join(IP.raw, ff.raw, by="date")
+
+industry = industry %>%
+  select(date, everything())
+```
+<font size=6 >Calculate risk premium</font>
+```{r}
+industry = industry %>%
+  mutate(NoDur=NoDur-rf) %>%
+  mutate(Durbl=Durbl-rf) %>%
+  mutate(Manuf=Manuf-rf) %>%
+  mutate(Enrgy=Enrgy-rf) %>%
+  mutate(HiTec=HiTec-rf) %>%
+  mutate(Telcm=Telcm-rf) %>%
+  mutate(Shops=Shops-rf) %>%
+  mutate(Hlth=Hlth-rf) %>%
+  mutate(Utils=Utils-rf) %>%
+  mutate(Other=Other-rf)
+```
+<font size=6 >Calculate Alpha and Beta</font>
+```{r}
+NoDur_Alpha = lm(NoDur~rmxrf, data=industry)$coefficients[1]
+NoDur_Beta = lm(NoDur~rmxrf, data=industry)$coefficients[2]
+Durbl_Alpha = lm(Durbl~rmxrf, data=industry)$coefficients[1]
+Durbl_Beta = lm(Durbl~rmxrf, data=industry)$coefficients[2]
+Manuf_Alpha = lm(Manuf~rmxrf, data=industry)$coefficients[1]
+Manuf_Beta = lm(Manuf~rmxrf, data=industry)$coefficients[2]
+Enrgy_Alpha = lm(Enrgy~rmxrf, data=industry)$coefficients[1]
+Enrgy_Beta = lm(Enrgy~rmxrf, data=industry)$coefficients[2]
+HiTec_Alpha = lm(HiTec~rmxrf, data=industry)$coefficients[1]
+HiTec_Beta = lm(HiTec~rmxrf, data=industry)$coefficients[2]
+Telcm_Alpha = lm(Telcm~rmxrf, data=industry)$coefficients[1]
+Telcm_Beta = lm(Telcm~rmxrf, data=industry)$coefficients[2]
+Shops_Alpha = lm(Shops~rmxrf, data=industry)$coefficients[1]
+Shops_Beta = lm(Shops~rmxrf, data=industry)$coefficients[2]
+Hlth_Alpha = lm(Hlth~rmxrf, data=industry)$coefficients[1]
+Hlth_Beta = lm(Hlth~rmxrf, data=industry)$coefficients[2]
+Utils_Alpha = lm(Utils~rmxrf, data=industry)$coefficients[1]
+Utils_Beta = lm(Utils~rmxrf, data=industry)$coefficients[2]
+Other_Alpha = lm(Other~rmxrf, data=industry)$coefficients[1]
+Other_Beta = lm(Other~rmxrf, data=industry)$coefficients[2]
+```
+
+<font size=6 >Summary</font>
+```{r}
+industry_summary = data.frame(name=c('NoDur','Durbl','Manuf','Enrgy','HiTec','Telcm','Shops','Hlth','Utils','Other'),
+                              Alpha=c(NoDur_Alpha,Durbl_Alpha,Manuf_Alpha,Enrgy_Alpha,HiTec_Alpha,Telcm_Alpha,
+                                      Shops_Alpha,Hlth_Alpha,Utils_Alpha,Other_Alpha),
+                              Beta=c(NoDur_Beta,Durbl_Beta,Manuf_Beta,Enrgy_Beta,HiTec_Beta,Telcm_Beta,
+                                     Shops_Beta,Hlth_Beta,Utils_Beta,Other_Beta))
+industry_summary
+```
+<font size=6 >Industry with max Beta: the most risky industry</font>
+```{r}
+industry_summary$name[which(industry_summary$Beta==max(industry_summary$Beta))]
+
+```
+<font size=6 >Industry with max Alpha: the best investment</font>
+```{r}
+industry_summary$name[which(industry_summary$Alpha==max(industry_summary$Alpha))]
+```
+
+

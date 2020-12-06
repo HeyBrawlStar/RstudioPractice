@@ -1,0 +1,18 @@
+#Q1
+setwd("/Users/guangyaohe/Desktop/FIN3380/Fin3380_HW1")
+library(zoo)
+library(dplyr)
+
+dj= read.csv("dj.csv")
+plot(dj$dji~as.Date(dj$date),type='l',ylab='DJindex',xlab='date',main='DJ Index')
+print(summary(dj))
+#There is an "NA" in dj
+
+
+dj = dj[-which(dj$dji==0),]
+dj = na.omit(dj)
+print(summary(dj))
+
+plot(dj$dji~as.Date(dj$date),type='l',ylab='DJindex',xlab='date',main='DJ Index')
+
+#Now NA is gone

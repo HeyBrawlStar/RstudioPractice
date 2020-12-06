@@ -1,0 +1,98 @@
+---
+title: "118010080_quiz5"
+author: '118010090'
+date: "10/21/2020"
+output: html_document
+---
+
+```{r}
+setwd("/Users/guangyaohe/Desktop/FIN3380/Fin3380_quiz5")
+
+library(RPostgres)
+library(tidyr)
+library(dplyr)
+IP.raw = read.fwf("10_Industry_Portfolios.txt",widths=c(6,7,7,7,7,7,7,7,7,7,7),skip=12)
+head(IP.raw)
+
+IP.raw = IP.raw[-which(is.na(IP.raw$V1))[1]:-nrow(IP.raw),]
+tail(IP.raw)
+
+colnames(IP.raw) = c("text.date",'NoDur','Durbl' , 'Manuf','Enrgy',
+'HiTec','Telcm','Shops','Hlth','Utils', 'Other')
+head(IP.raw)
+str(IP.raw)
+IP.raw = IP.raw[,c(-1)]
+
+tail(IP.raw)
+
+IP.raw = data.frame(apply(IP.raw,2,function(x) as.numeric(x)/100))
+
+IP.raw$date = seq(as.Date("1926-07-01"),as.Date("2020-08-31"),by="months")
+IP.raw = subset(IP.raw,IP.raw$date>="1927-01-01")
+
+head(IP.raw)
+
+
+save(IP.raw,file='IP.raw.RData')
+
+IP.raw.long = gather(IP.raw, key = Industry, value = ret, -date)
+head(IP.raw.long)
+
+tmp.summary = IP.raw.long %>% 
+  group_by(Industry) %>%
+  summarise(n = n()) %>%
+  ungroup()
+
+tmp.summary
+str(IP.raw.long)
+
+IP = IP.raw.long %>%
+  mutate(ret=ifelse(ret == -99.99, 0, ret)) %>%
+  mutate(ret=ifelse(is.na(ret), 0, ret)) %>%
+  mutate(ret=ifelse(ret == -999, 0, ret)) %>%
+  mutate(date = as.character(date)) %>%
+  mutate(yy = substr(date, 1, 4)) %>%
+  group_by(Industry,yy) %>%
+  arrange(date) %>%
+  mutate(cumret=cumprod(ret+1)) %>%
+  ungroup()
+
+head(IP)
+summary(IP)
+
+IP.ew = IP %>% 
+  group_by(date) %>% 
+  summarise(ew=mean(cumret),
+            yy=first(yy)) %>%
+  ungroup()
+
+head(IP)
+
+IP.ew = IP.ew %>% 
+  group_by(yy) %>% 
+  arrange(date) %>%
+  mutate(ret=ew/lag(ew,1)-1) %>% ungroup()
+head(IP)
+
+# fill the first date of each month with the return on that day
+IP.ew = IP.ew %>% 
+  mutate(ret=ifelse(is.na(ret),ew-1,ret))
+head(IP.ew)
+
+head(IP.ew)
+# cumulative returns over all periods
+IP.ew = IP.ew %>% 
+  arrange(date) %>% 
+  mutate(ew.all = cumprod(ret+1))
+
+head(IP.ew)
+
+# visualise equal weight index cumulative returns 
+plot(IP.ew$ew.all~as.Date(IP.ew$date),
+     type='l',xlab='date',ylab='ew.id',
+     main='Equal Weighted Index')
+head(IP.ew)
+summary(IP.ew)
+
+```
+
